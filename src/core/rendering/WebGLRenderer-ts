@@ -1,0 +1,261 @@
+import { WebGLResourceManager } from '../../../utils/webgl-resource-manager';
+import { ShaderCompilationUtils } from '../../../utils/shader-compilation';
+import { PerformanceOptimizer } from '../../../utils/performance-optimizer';
+import { GeometryData, ShaderConfig, PerformanceMetrics } from '../../../types/sacred-geometry';
+
+export class WebGLRenderer {
+  private gl: WebGL2RenderingContext;
+  private resourceManager: WebGLResourceManager;
+  private performanceOptimizer: PerformanceOptimizer;
+  private currentProgram: WebGLProgram | null;
+  private frameBufferStack: WebGLFramebuffer[];
+  private viewportStack: number[][];
+  
+  // Performance metrics
+  private fps: number;
+  private performanceMetrics: PerformanceMetrics;
+  
+  constructor(canvas: HTMLCanvasElement) {
+    this.gl = canvas.getContext('webgl2', {
+      alpha: false,
+      depth: true,
+      stencil: true,
+      antialias: true,
+      premultipliedAlpha: false,
+      preserveDrawingBuffer: false,
+      powerPreference: 'high-performance'
+    }) as WebGL2RenderingContext;
+
+    if (!this.gl) {
+      throw new Error('WebGL 2 not supported');
+    }
+
+    // Initialize managers and optimizers
+    this.resourceManager = new WebGLResourceManager(this.gl);
+    this.performanceOptimizer = new PerformanceOptimizer(this.gl);
+    
+    // Initialize stacks
+    this.frameBufferStack = [];
+    this.viewportStack = [];
+    this.currentProgram = null;
+    
+    // Initialize performance metrics
+    this.fps = 0;
+    this.performanceMetrics = {
+      frameTime: 0,
+      drawCalls: 0,
+      triangleCount: 0,
+      cacheEfficiency: { geometry: 0, shader: 0 },
+      memoryUsage: 0
+    };
+
+    // Setup initial GL state
+    this.setupGLState();
+  }
+
+  private setupGLState(): void {
+    const gl = this.gl;
+    
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    
+    // Enable extensions
+    gl.getExtension('EXT_color_buffer_float');
+    gl.getExtension('OES_texture_float_linear');
+  }
+
+  public async createShaderProgram(config: ShaderConfig): Promise<WebGLProgram> {
+    // Check cache first
+    const cacheKey = this.generateShaderCacheKey(config);
+    const cachedProgram = this.performanceOptimizer.getProgram(cacheKey);
+    if (cachedProgram) {
+      return cachedProgram;
+    }
+
+    // Create new program if not cached
+    const program = await ShaderCompilationUtils.createValidatedProgram(
+      this.gl,
+      config,
+      true // Enable debug mode during development
+    );
+
+    // Cache the new program
+    this.performanceOptimizer.cacheProgram(cacheKey, program, config);
+    return program;
+  }
+
+  public beginRender(program: WebGLProgram, uniforms: Record<string, any>): void {
+    this.performanceOptimizer.beginFrame();
+    
+    if (this.currentProgram !== program) {
+      this.gl.useProgram(program);
+      this.currentProgram = program;
+    }
+
+    // Update uniforms
+    this.updateUniforms(program, uniforms);
+  }
+
+  public renderGeometry(geometry: GeometryData): void {
+    const gl = this.gl;
+    
+    // Get or create VAO
+    const vao = this.getGeometryVAO(geometry);
+    gl.bindVertexArray(vao);
+
+    // Draw
+    if (geometry.indices) {
+      gl.drawElements(
+        gl.TRIANGLES,
+        geometry.indices.length,
+        gl.UNSIGNED_SHORT,
+        0
+      );
+    } else {
+      gl.drawArrays(
+        gl.TRIANGLES,
+        0,
+        geometry.vertices.length / 3
+      );
+    }
+
+    // Record performance metrics
+    this.performanceOptimizer.recordDrawCall(
+      geometry.indices ? geometry.indices.length / 3 : geometry.vertices.length / 9
+    );
+  }
+
+  public endRender(): void {
+    this.performanceOptimizer.endFrame();
+    this.updatePerformanceMetrics();
+  }
+
+  public pushFramebuffer(framebuffer: WebGLFramebuffer | null, viewport?: number[]): void {
+    this.frameBufferStack.push(framebuffer);
+    if (viewport) {
+      this.viewportStack.push(viewport);
+      this.gl.viewport(...viewport);
+    }
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
+  }
+
+  public popFramebuffer(): void {
+    const framebuffer = this.frameBufferStack.pop();
+    const viewport = this.viewportStack.pop();
+    
+    if (viewport) {
+      this.gl.viewport(...viewport);
+    }
+    
+    this.gl.bindFramebuffer(
+      this.gl.FRAMEBUFFER,
+      this.frameBufferStack[this.frameBufferStack.length - 1] || null
+    );
+  }
+
+  private getGeometryVAO(geometry: GeometryData): WebGLVertexArrayObject {
+    // Check cache first
+    const cacheKey = this.generateGeometryCacheKey(geometry);
+    const cachedGeometry = this.performanceOptimizer.getGeometry(cacheKey);
+    
+    if (cachedGeometry) {
+      return (cachedGeometry as any).vao;
+    }
+
+    // Create new VAO if not cached
+    const vao = this.gl.createVertexArray()!;
+    this.gl.bindVertexArray(vao);
+
+    // Create and bind buffers
+    const vertexBuffer = this.resourceManager.createBuffer({
+      target: this.gl.ARRAY_BUFFER,
+      usage: this.gl.STATIC_DRAW,
+      data: geometry.vertices
+    });
+
+    const normalBuffer = this.resourceManager.createBuffer({
+      target: this.gl.ARRAY_BUFFER,
+      usage: this.gl.STATIC_DRAW,
+      data: geometry.normals
+    });
+
+    if (geometry.indices) {
+      const indexBuffer = this.resourceManager.createBuffer({
+        target: this.gl.ELEMENT_ARRAY_BUFFER,
+        usage: this.gl.STATIC_DRAW,
+        data: geometry.indices
+      });
+    }
+
+    // Set up attributes
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
+    this.gl.enableVertexAttribArray(0);
+    this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer);
+    this.gl.enableVertexAttribArray(1);
+    this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+
+    // Cache the geometry with VAO
+    const geometryWithVAO = { ...geometry, vao };
+    this.performanceOptimizer.cacheGeometry(cacheKey, geometryWithVAO);
+
+    return vao;
+  }
+
+  private updateUniforms(program: WebGLProgram, uniforms: Record<string, any>): void {
+    for (const [name, value] of Object.entries(uniforms)) {
+      const location = this.gl.getUniformLocation(program, name);
+      if (location === null) continue;
+
+      if (Array.isArray(value)) {
+        switch (value.length) {
+          case 2:
+            this.gl.uniform2fv(location, value);
+            break;
+          case 3:
+            this.gl.uniform3fv(location, value);
+            break;
+          case 4:
+            this.gl.uniform4fv(location, value);
+            break;
+          case 16:
+            this.gl.uniformMatrix4fv(location, false, value);
+            break;
+        }
+      } else if (typeof value === 'number') {
+        this.gl.uniform1f(location, value);
+      }
+    }
+  }
+
+  private updatePerformanceMetrics(): void {
+    this.performanceMetrics = this.performanceOptimizer.getPerformanceMetrics();
+    this.fps = Math.round(1000 / this.performanceMetrics.frameTime);
+  }
+
+  private generateShaderCacheKey(config: ShaderConfig): string {
+    return `${config.vertexShader.length}-${config.fragmentShader.length}-${Object.keys(config.uniforms).sort().join(',')}`;
+  }
+
+  private generateGeometryCacheKey(geometry: GeometryData): string {
+    return `${geometry.vertices.length}-${geometry.normals.length}-${geometry.indices?.length || 0}`;
+  }
+
+  public dispose(): void {
+    this.resourceManager.dispose();
+    this.currentProgram = null;
+    this.frameBufferStack = [];
+    this.viewportStack = [];
+  }
+
+  public getFPS(): number {
+    return this.fps;
+  }
+
+  public getPerformanceMetrics(): PerformanceMetrics {
+    return { ...this.performanceMetrics };
+  }
+}

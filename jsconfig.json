@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@utils/*": ["src/utils/*"],
+      "@styles/*": ["src/styles/*"],
+      "@visual_design/*": ["visual_design/*"],
+      "@user_interface/*": ["user_interface/*"],
+      "@market_analysis/*": ["market_analysis/*"],
+      "@token_discovery/*": ["token_discovery/*"],
+      "@core/*": ["core/*"]
+    }
+  }
+}

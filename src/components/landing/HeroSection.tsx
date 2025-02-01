@@ -1,27 +1,39 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
-import { MetatronsCube } from './MetatronsCube';
-import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
-import { SACRED_RATIOS } from '../../shared/constants';
-import { MatrixButton } from '../common/MatrixButton';
-import { ErrorBoundary } from '../error-boundary/ErrorBoundary';
-import dynamic from 'next/dynamic';
-import Image from 'next/image';
+'use client'
 
-// Dynamically import heavy components
-const DynamicMetatronsCube = dynamic(() => import('./MetatronsCube').then(mod => mod.MetatronsCube), {
-  ssr: false,
-  loading: () => <div className="w-full h-full animate-pulse bg-gray-800/50" />
-});
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion, useMotionValue, useTransform } from '../motion';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import { SACRED_RATIOS } from '../../shared/constants';
+import { CTAButton } from './CTAButton';
+import { ErrorBoundary } from '../error-boundary/ErrorBoundary';
+
+const DynamicMetatronsCube = dynamic(
+  () => import('./MetatronsCube').then(mod => mod.MetatronsCube),
+  {
+    ssr: false,
+    loading: () => <div className="w-full h-full animate-pulse bg-gray-800/50" />
+  }
+);
 
 const goldenRatio = SACRED_RATIOS.PHI;
 
-export const HeroSection: React.FC = React.memo(() => {
-  const controls = useAnimation();
+type Props = {
+  children?: never;
+};
+
+const HeroSectionBase: React.FC<Props> = () => {
+  // Memoize event handler to prevent unnecessary re-renders
+  const handleKeyPress = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      // Handle enter/space key press for accessibility
+      console.log('Matrix button activated via keyboard');
+    }
+  }, []);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  // Transform mouse movement into rotation
   const rotateX = useTransform(mouseY, [-500, 500], [15, -15]);
   const rotateY = useTransform(mouseX, [-500, 500], [-15, 15]);
 
@@ -34,8 +46,43 @@ export const HeroSection: React.FC = React.memo(() => {
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [handleMouseMove]);
+    window.addEventListener('keypress', handleKeyPress);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keypress', handleKeyPress);
+    };
+  }, [handleMouseMove, handleKeyPress]);
+
+  // Memoize complex calculations and static JSX
+  const titleAnimation = useMemo(() => ({
+    initial: { opacity: 0, y: 50 },
+    animate: { 
+      opacity: 1,
+      y: 0,
+      textShadow: [
+        "0 0 20px rgba(0,255,204,0.3)",
+        "0 0 40px rgba(0,255,204,0.2)",
+        "0 0 20px rgba(0,255,204,0.3)"
+      ]
+    },
+    transition: { 
+      duration: goldenRatio,
+      ease: [0.618, 0, 0.382, 1]
+    }
+  }), []);
+
+  const subtitleAnimation = useMemo(() => ({
+    initial: { opacity: 0, scale: 0.9 },
+    animate: { 
+      opacity: 1,
+      scale: 1,
+      transition: { 
+        delay: goldenRatio * 0.382,
+        duration: goldenRatio * 0.618,
+        ease: [0.34, 1.56, 0.64, 1]
+      }
+    }
+  }), []);
 
   const backgroundElements = useMemo(() => (
     <div className="absolute inset-0">
@@ -55,21 +102,15 @@ export const HeroSection: React.FC = React.memo(() => {
     <section 
       className="relative w-full min-h-screen"
       role="banner"
-      aria-labelledby="hero-title">
+      aria-labelledby="hero-title"
+      aria-describedby="hero-description"
+      aria-live="polite"
+    >
       {backgroundElements}
-
-      {/* Content Container */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-full max-w-4xl mx-auto px-4">
-          <motion.div
-            className="flex flex-col items-center justify-center"
-            style={{ perspective: 1000 }}
-          >
-            <motion.div
-              style={{ rotateX, rotateY }}
-              className="flex flex-col items-center"
-            >
-              {/* Logo */}
+          <motion.div className="flex flex-col items-center justify-center" style={{ perspective: 1000 }}>
+            <motion.div style={{ rotateX, rotateY }} className="flex flex-col items-center">
               <motion.div
                 className="w-48 h-48 mb-12"
                 initial={{ scale: 0, rotate: -180 }}
@@ -86,69 +127,68 @@ export const HeroSection: React.FC = React.memo(() => {
                 />
               </motion.div>
 
-              {/* Title */}
-              <motion.h1 
+              <motion.h1
                 ref={titleRef}
-                className="text-6xl md:text-8xl font-orbitron font-bold mb-8 text-center
-                           bg-clip-text text-transparent bg-gradient-to-r from-[#FFD700] via-[#00FFCC] to-[#FFD700]
-                           filter drop-shadow-[0_0_15px_rgba(0,255,204,0.5)]"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ 
-                  opacity: 1, 
-                  y: 0,
-                  textShadow: [
-                    "0 0 20px rgba(0,255,204,0.3)",
-                    "0 0 40px rgba(0,255,204,0.2)",
-                    "0 0 20px rgba(0,255,204,0.3)",
-                  ]
-                }}
-                transition={{ 
-                  duration: goldenRatio,
-                  ease: [0.618, 0, 0.382, 1],
-                }}
-              >
-                NEOSNIPE
-              </motion.h1>
+                id="hero-title"
+                {...titleAnimation}
+                className="text-6xl md:text-8xl font-orbitron font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#FFD700] via-[#00FFCC] to-[#FFD700] filter drop-shadow-[0_0_15px_rgba(0,255,204,0.5)]"
+              >NEOSNIPE</motion.h1>
               
-              {/* Subtitle */}
-              <motion.p 
-                className="text-xl md:text-2xl font-space-grotesk mb-6
-                           text-transparent bg-clip-text bg-gradient-to-r from-[#9674d4] to-[#00FFCC]
-                           tracking-wider text-center max-w-2xl mx-auto"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ 
-                  delay: goldenRatio * 0.382,
-                  duration: goldenRatio * 0.618
-                }}
+              <motion.h2 
+                id="hero-description"
+                className="text-xl md:text-2xl font-space-grotesk mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cosmic-purple to-neon-teal tracking-wider text-center max-w-2xl mx-auto"
+                variants={subtitleAnimation}
+                initial="initial"
+                animate="animate"
+                tabIndex={0}
               >
-                Discover tokens through sacred geometry
+                Discover Tokens Through Sacred Geometry
+              </motion.h2>
+
+              <motion.p
+                className="text-lg text-gray-400 font-space-grotesk mb-12 tracking-wide text-center max-w-2xl mx-auto"
+                variants={subtitleAnimation}
+                initial="initial"
+                animate="animate"
+              >
+                Where Mathematics Meets Market Movement
               </motion.p>
 
-              {/* Subtext */}
-              <motion.p
-                className="text-lg text-gray-400 font-space-grotesk mb-12
-                           tracking-wide text-center max-w-2xl mx-auto"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  delay: goldenRatio * 0.618,
-                  duration: goldenRatio * 0.382
-                }}
-              >
-                Harness the power of ancient wisdom combined with cutting-edge technology
-              </motion.p>
+              <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <CTAButton
+                  size="lg"
+                  variant="primary"
+                  geometricShape="hexagon"
+                  onClick={() => {
+                    // Handle primary CTA click
+                    console.log('Primary CTA clicked');
+                  }}
+                >
+                  Enter the Matrix
+                </CTAButton>
+
+                <CTAButton
+                  size="lg"
+                  variant="secondary"
+                  geometricShape="octagon"
+                  onClick={() => {
+                    // Handle secondary CTA click
+                    console.log('Secondary CTA clicked');
+                  }}
+                >
+                  Explore Patterns
+                </CTAButton>
+              </div>
               
-              {/* CTA Button */}
-              <MatrixButton>Enter the Matrix</MatrixButton>
+              {/* Matrix Button removed in favor of CTAButton */}
             </motion.div>
           </motion.div>
         </div>
       </div>
-
-      {/* Decorative lines */}
       <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00FFCC]/50 to-transparent" />
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00FFCC]/50 to-transparent" />
     </section>
   );
 };
+
+export const HeroSection = React.memo(HeroSectionBase);

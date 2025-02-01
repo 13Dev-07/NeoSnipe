@@ -1,0 +1,1 @@
+export type EnergyFlowType = 'clockwise' | 'counterclockwise' | 'bidirectional' | 'static' | 'spiral';

@@ -52,16 +52,68 @@ npm start
 ## Major Dependencies
 
 ### Core Dependencies
-- Next.js: ^12.0.0 - React framework for production
-- React: ^17.0.2 - UI library
-- Three.js: ^0.135.0 - 3D graphics library
-- TypeScript: ^4.5.0 - Type safety and developer experience
+- Next.js: ^13.4.0 - React framework for production
+- React: ^18.2.0 - UI library
+- Three.js: ^0.154.0 - 3D graphics library
+- TypeScript: ^5.0.0 - Type safety and developer experience
+- TensorFlow.js: ^4.10.0 - Pattern recognition and analysis
 
 ### Development Dependencies
 - ESLint: ^8.0.0 - Code linting
-- Jest: ^27.0.0 - Testing framework
-- Tailwind CSS: ^3.0.0 - Utility-first CSS framework
-- Vite: ^2.7.0 - Build tool and development server
+- Jest: ^29.0.0 - Testing framework
+- Tailwind CSS: ^3.3.0 - Utility-first CSS framework
+- Vite: ^4.0.0 - Build tool and development server
+
+## Troubleshooting
+
+### Common Issues
+
+1. **WebGL Context Loss**
+   - Symptom: Black screen or rendering issues
+   - Solution: Refresh the page or clear browser cache
+   - Prevention: Enable context loss handling in settings
+
+2. **Performance Issues**
+   - Symptom: Slow rendering or laggy interactions
+   - Solutions:
+     - Check hardware acceleration is enabled
+     - Reduce pattern complexity
+     - Clear browser cache
+     - Update graphics drivers
+
+3. **Setup Problems**
+   - Symptom: Build or startup errors
+   - Solutions:
+     - Verify Node.js version matches requirements
+     - Clear npm cache: `npm cache clean --force`
+     - Remove node_modules and reinstall
+     - Check for conflicting global packages
+
+4. **Data Stream Issues**
+   - Symptom: Missing or delayed market data
+   - Solutions:
+     - Check internet connection
+     - Verify API keys and permissions
+     - Monitor WebSocket connections
+     - Check browser console for errors
+
+### Performance Optimization
+- Use Chrome DevTools Performance tab
+- Monitor FPS using built-in tools
+- Check memory usage patterns
+- Use React Profiler for component optimization
+
+### Debug Tools
+- Browser DevTools (WebGL tab)
+- React Developer Tools
+- Performance monitoring dashboard
+- Built-in logging system
+
+## Support and Resources
+- [Developer Guide](./DEVELOPER_GUIDE.md)
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Technical Guides](./TECHNICAL_GUIDES.md)
+- [Contributing Guidelines](./CONTRIBUTING.md)
 
 ## Contributing
 

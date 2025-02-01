@@ -1,18 +1,17 @@
-import { EnergyFlowType } from './sacred-geometry';
+import { EnergyFlowType } from './sacred-geometry/energy-flow';
 
 export interface MetatronsCubeProps {
   rotation?: 'continuous' | 'interactive';
   duration?: number;
-  energyFlow?: EnergyFlowType;
+  energyFlow?: 'clockwise' | 'counterclockwise' | 'bidirectional' | 'static' | 'spiral';
   mouseFollow?: boolean;
   particleAttraction?: boolean;
 }
 
-export interface MetatronsCubeConfig {
-  rotation: 'continuous' | 'interactive';
-  duration: number;
-  energyFlow: EnergyFlowType;
-  mouseFollow: boolean;
-  particleAttraction: boolean;
-  phi: number;
+// Interface moved to sacred-geometry/patterns.d.ts
+export interface MetatronsCubeConfig extends MetatronsCubeProps {
+  type: 'metatronsCube';
+  phi?: number;
+  duration?: number;
+  energyFlow?: 'clockwise' | 'counterclockwise' | 'bidirectional' | 'static' | 'spiral';
 }

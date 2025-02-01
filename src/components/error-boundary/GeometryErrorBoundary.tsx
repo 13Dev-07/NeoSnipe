@@ -53,12 +53,10 @@ export class GeometryErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <Box
-          sx={{
-            p: 3,
-            border: '1px solid #f44336',
-            borderRadius: 1,
-            bgcolor: '#ffebee'
-          }}
+          className="error-boundary animate-fade-in"
+          role="alert"
+          aria-live="assertive"
+          tabIndex={0}
         >
           <Typography variant="h6" color="error" gutterBottom>
             Sacred Geometry Rendering Error

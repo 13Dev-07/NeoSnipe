@@ -1,0 +1,47 @@
+.token-card {
+  padding: 16px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--background-color);
+  transition: border-color 0.2s ease-in-out;
+}
+
+.token-card:hover {
+  border-color: var(--primary-color);
+}
+
+.token-card:focus {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.token-card.selected {
+  background-color: var(--primary-light);
+  border-color: var(--primary-color);
+}
+
+/* High Contrast Support */
+@media (prefers-contrast: high) {
+  .token-card {
+    border: 2px solid var(--text-color);
+  }
+  
+  .token-card.selected {
+    background-color: var(--text-color);
+    color: var(--background-color);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .token-card {
+    transition: none;
+  }
+}
+
+.no-results {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-color);
+}

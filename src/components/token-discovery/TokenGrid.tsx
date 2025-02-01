@@ -1,5 +1,6 @@
 import React from 'react';
-import { Grid, Card, Typography, Box } from '@mui/material';
+import { Grid, Typography } from '@mui/material';
+import { TokenCard } from './components/TokenCard';
 import { styled } from '@mui/material/styles';
 import { PricePoint } from '../../shared/constants';
 
@@ -14,33 +15,42 @@ interface Token {
 interface TokenGridProps {
   tokens: Token[];
   onTokenSelect: (token: Token) => void;
+  selectedToken: Token | null;
+  isLoading: boolean;
 }
 
-const StyledCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(2),
-  cursor: 'pointer',
-  transition: 'transform 0.2s ease-in-out',
-  '&:hover': {
-    transform: 'scale(1.02)',
-  },
-}));
+// Styles moved to token-grid.css for better accessibility support
 
-export const TokenGrid: React.FC<TokenGridProps> = ({ tokens, onTokenSelect }) => {
+export const TokenGrid: React.FC<TokenGridProps> = ({ tokens, onTokenSelect, selectedToken, isLoading }) => {
   return (
-    <Grid container spacing={3}>
-      {tokens.map((token) => (
-        <Grid item xs={12} sm={6} md={4} key={token.address}>
-          <StyledCard onClick={() => onTokenSelect(token)}>
-            <Typography variant="h6">{token.name}</Typography>
-            <Typography color="textSecondary">{token.symbol}</Typography>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                Liquidity Score: {(token.liquidityScore * 100).toFixed(2)}%
-              </Typography>
-            </Box>
-          </StyledCard>
-        </Grid>
-      ))}
-    </Grid>
+    <div role="grid" aria-label="Token selection grid">
+      <Grid container spacing={3} role="presentation">
+        {tokens.map((token) => (
+          <Grid 
+            item 
+            xs={12} 
+            sm={6} 
+            md={4} 
+            key={token.address}
+            role="gridcell"
+          >
+            <TokenCard
+              token={token}
+              isSelected={selectedToken?.address === token.address}
+              onSelect={() => onTokenSelect(token)}
+            />
+          </Grid>
+        ))}
+      </Grid>
+      {tokens.length === 0 && !isLoading && (
+        <Typography 
+          role="status" 
+          aria-live="polite"
+          className="no-results"
+        >
+          No tokens found matching your search criteria
+        </Typography>
+      )}
+    </div>
   );
 };

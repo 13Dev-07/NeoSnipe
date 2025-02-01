@@ -45,15 +45,37 @@ export const DiscoveryInterface: React.FC = () => {
     startMonitoring();
   }, [analyzePatterns, startMonitoring]);
 
+  useEffect(() => {
+    // Update performance monitoring when pattern analysis is active
+    if (selectedToken) {
+      startMonitoring();
+      return () => stopMonitoring();
+    }
+  }, [selectedToken, startMonitoring, stopMonitoring]);
+
   return (
     <GeometryErrorBoundary onReset={() => {
       setSelectedToken(null);
       stopMonitoring();
     }}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4
+                 bg-primary text-white px-4 py-2 z-50"
+      >
+        Skip to main content
+      </a>
       <Container maxWidth="lg">
-        <Box sx={{ py: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Token Discovery
+        <Box 
+          sx={{ py: 4 }}
+          id="main-content"
+          role="main"
+          tabIndex={-1}>
+          <Typography variant="h4" gutterBottom role="heading" aria-level={1}>
+            Token Discovery Interface
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2 }} role="contentinfo">
+            Search and analyze tokens using sacred geometry patterns
           </Typography>
           
           <TextField
@@ -62,13 +84,27 @@ export const DiscoveryInterface: React.FC = () => {
             variant="outlined"
             onChange={(e) => debouncedScanTokens(e.target.value)}
             sx={{ mb: 4 }}
+            inputProps={{
+              'aria-label': 'Search for tokens',
+              'role': 'searchbox',
+              'aria-describedby': 'token-search-desc'
+            }}
+          />
+          <Typography id="token-search-desc" className="sr-only">
+            Enter token name, symbol, or address to search available tokens
+          </Typography>
           />
 
           <DataFlow performanceMetrics={metrics} />
 
           {(scanningLoading || patternLoading) && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-              <CircularProgress />
+            <Box 
+              sx={{ display: 'flex', justifyContent: 'center', my: 4 }}
+              role="status"
+              aria-live="polite"
+            >
+              <CircularProgress aria-label="Loading tokens..." />
+              <span className="sr-only">Loading tokens, please wait...</span>
             </Box>
           )}
 
@@ -104,18 +140,33 @@ export const DiscoveryInterface: React.FC = () => {
                 borderRadius: 1,
                 color: 'error.contrastText'
               }}
+              role="alert"
+              aria-live="assertive"
+              tabIndex={0}
             >
               <Typography variant="body1">
+                <span className="sr-only">Error: </span>
                 {scanningError || patternError || sacredGeometry.error?.message}
               </Typography>
+              <button
+                onClick={() => {
+                  setSelectedToken(null);
+                  stopMonitoring();
+                }}
+                className="mt-2 px-4 py-2 bg-primary text-white rounded"
+                aria-label="Reset application state"
+              >
+                Reset
+              </button>
             </Box>
           )}
 
           {metrics && (
             <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom role="heading" aria-level={2}>
                 Performance Metrics
               </Typography>
+              <div role="region" aria-label="Performance statistics">
               <Typography variant="body2">
                 FPS: {Math.round(metrics.fps)}
               </Typography>

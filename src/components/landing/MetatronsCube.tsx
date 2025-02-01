@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { initMetatronsCube } from '../../utils/sacred-geometry';
 import { ParticleSystem } from '../../utils/particle-system';
+import { WebGLResourcePool } from '../../utils/webgl/resource-pool';
 import { SACRED_RATIOS } from '../../shared/constants';
 
 import { MetatronsCubeProps } from '../../types/metatrons-cube';
@@ -15,6 +16,7 @@ export const MetatronsCube: React.FC<MetatronsCubeProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const particleSystemRef = useRef<ParticleSystem | null>(null);
+  const resourcePoolRef = useRef<WebGLResourcePool | null>(null);
   const lastTimeRef = useRef<number>(0);
 
   // Memoize configuration to prevent unnecessary re-renders
@@ -43,6 +45,9 @@ export const MetatronsCube: React.FC<MetatronsCubeProps> = ({
       console.error('WebGL2 not supported');
       return;
     }
+    
+    // Initialize WebGL resource pool
+    resourcePoolRef.current = new WebGLResourcePool(gl);
 
     // Enable required WebGL features
     gl.enable(gl.BLEND);
@@ -93,6 +98,12 @@ export const MetatronsCube: React.FC<MetatronsCubeProps> = ({
 
     return () => {
       cleanup();
+      
+      // Clean up WebGL resources
+      if (resourcePoolRef.current) {
+        resourcePoolRef.current.cleanup();
+      }
+      
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
     };

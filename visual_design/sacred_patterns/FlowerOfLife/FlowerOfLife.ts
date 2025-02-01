@@ -1,7 +1,9 @@
 import { vec2, vec3, mat4 } from 'gl-matrix';
-import { SacredGeometryConfig, FlowerOfLifeConfig, GeometryData } from '../../src/types/sacred-geometry';
-import { PHI, SQRT_PHI, goldenAngle } from '../../src/utils/sacred-geometry';
-import { WebGLResourceManager } from '../../src/utils/webgl-resource-manager';
+import { GeometryData, SacredGeometryConfig } from '@/types/sacred-geometry';
+import { FlowerOfLifeConfig } from './types';
+import { chakraColors } from './types';
+import { PHI, SQRT_PHI, goldenAngle } from '@/utils/sacred-geometry/geometry';
+import { WebGLResourceManager } from '@/utils/webgl-resource-manager';
 
 export interface FlowerOfLifeConfig extends SacredGeometryConfig {
   rings: number;
@@ -79,6 +81,16 @@ export class FlowerOfLife {
   }
 
   private getColor(ringIndex: number): [number, number, number, number] {
+    if (this.config.colorScheme === 'chakra') {
+      return chakraColors[ringIndex % chakraColors.length];
+    } else if (this.config.colorScheme === 'golden') {
+      const phi = (1 + Math.sqrt(5)) / 2;
+      const hue = (ringIndex * phi) % 1;
+      return [hue, 0.8, 0.5, 1.0];
+    } else { // rainbow
+      const hue = (ringIndex / 7);
+      return [hue, 1.0, 0.5, 1.0];
+    }
     switch (this.config.colorScheme) {
       case 'rainbow':
         return [

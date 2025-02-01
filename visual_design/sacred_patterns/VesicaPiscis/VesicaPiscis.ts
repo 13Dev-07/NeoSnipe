@@ -1,5 +1,5 @@
 import { vec2, vec3, mat4 } from 'gl-matrix';
-import { SacredGeometryConfig, GeometryData } from '../../../src/types/sacred-geometry';
+import type { SacredGeometryConfig, GeometryData } from '../../../src/types/sacred-geometry';
 import { WebGLResourceManager } from '../../../src/utils/webgl-resource-manager';
 
 export interface VesicaPiscisConfig extends SacredGeometryConfig {
@@ -79,7 +79,7 @@ export class VesicaPiscis {
             indices: new Uint16Array(indices),
             colors: new Float32Array(colors),
             normals: new Float32Array(normals),
-            type: 'vesicaPiscis'
+            type: 'vesicaPiscis' as const
         };
     }
 

@@ -22,6 +22,38 @@ export interface PatternConfidence {
     avgSignificance: number;
 }
 
+export enum PatternType {
+    GOLDEN_SPIRAL = 'GOLDEN_SPIRAL',
+    FIBONACCI_RETRACEMENT = 'FIBONACCI_RETRACEMENT',
+    HARMONIC_BUTTERFLY = 'HARMONIC_BUTTERFLY',
+    HARMONIC_GARTLEY = 'HARMONIC_GARTLEY',
+    HARMONIC_BAT = 'HARMONIC_BAT',
+    HARMONIC_CRAB = 'HARMONIC_CRAB',
+    GOLDEN_RATIO_CHANNEL = 'GOLDEN_RATIO_CHANNEL'
+}
+
+export interface Pattern {
+    type: PatternType;
+    startIndex: number;
+    endIndex: number;
+    confidence: number;
+    points: number[];
+    metadata?: {
+        ratios: number[];
+        priceRange: [number, number];
+        timeRange: [number, number];
+        validation: ValidationMetrics;
+    };
+}
+
+export interface ValidationMetrics {
+    ratioAccuracy: number;
+    priceStructure: number;
+    timeSymmetry: number;
+    volumeConfirmation: number;
+    trendConsistency: number;
+}
+
 export interface PatternScanConfig {
     windowSize?: number;
     minConfidence?: number;

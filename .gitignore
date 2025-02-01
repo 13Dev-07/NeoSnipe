@@ -5,21 +5,22 @@
 
 # testing
 /coverage
+/.nyc_output
 
 # next.js
 /.next/
 /out/
+/build
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # debug
 npm-debug.log*
@@ -28,9 +29,6 @@ yarn-error.log*
 
 # local env files
 .env*.local
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
@@ -41,3 +39,20 @@ next-env.d.ts
 .vscode/
 *.swp
 *.swo
+
+# Backup files
+*.bak
+*~
+*.old
+*.backup
+
+# Cache
+.cache/
+.npm/
+
+# Testing artifacts
+/cypress/videos/
+/cypress/screenshots/
+
+# System Files
+Thumbs.db

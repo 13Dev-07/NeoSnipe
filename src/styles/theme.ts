@@ -1,51 +1,78 @@
 import { createTheme } from '@mui/material/styles';
 
-const PHI = 1.618033988749895;
+// Sacred geometry constants
+const GOLDEN_RATIO = 1.618034;
+const SILVER_RATIO = 2.414214;
 
-export const theme = createTheme({
+declare module '@mui/material/styles' {
+  interface Palette {
+    cosmic: {
+      black: string;
+      purple: string;
+      teal: string;
+      gold: string;
+      blue: string;
+      gray: string;
+    };
+  }
+  interface PaletteOptions {
+    cosmic: {
+      black: string;
+      purple: string;
+      teal: string;
+      gold: string;
+      blue: string;
+      gray: string;
+    };
+  }
+}
+
+const theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#00FFCC',
+      main: '#00FFCC', // neon-teal
     },
     secondary: {
-      main: '#9674d4',
+      main: '#663399', // cosmic-purple
     },
-    background: {
-      default: '#080A2E',
-      paper: '#1A1B4D',
-    },
-    text: {
-      primary: '#FFFFFF',
-      secondary: 'rgba(255, 255, 255, 0.7)',
+    cosmic: {
+      black: '#0A0A0F',
+      purple: '#663399',
+      teal: '#00FFCC',
+      gold: '#FFD700',
+      blue: '#00A3FF',
+      gray: '#1A1A2E',
     },
   },
   typography: {
-    fontFamily: '"Space Grotesk", sans-serif',
+    fontFamily: 'var(--font-space-grotesk)',
     h1: {
-      fontFamily: '"Orbitron", sans-serif',
-      fontSize: `${PHI * 2}rem`,
+      fontFamily: 'var(--font-orbitron)',
+      letterSpacing: '0.1em',
     },
     h2: {
-      fontFamily: '"Orbitron", sans-serif',
-      fontSize: `${PHI * 1.5}rem`,
+      fontFamily: 'var(--font-orbitron)',
+      letterSpacing: '0.08em',
     },
     h3: {
-      fontSize: `${PHI}rem`,
-    },
-    button: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: 'var(--font-orbitron)',
+      letterSpacing: '0.06em',
     },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 8 * GOLDEN_RATIO,
   },
+  spacing: (factor: number) => `${8 * factor * GOLDEN_RATIO}px`,
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: '8px',
           textTransform: 'none',
+          '&:hover': {
+            boxShadow: '0 0 16px #00FFCC',
+          },
         },
       },
     },
@@ -53,8 +80,13 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          backgroundColor: 'rgba(10, 10, 15, 0.7)',
+          backdropFilter: 'blur(12px)',
+          borderColor: 'rgba(0, 255, 204, 0.1)',
         },
       },
     },
   },
 });
+
+export { theme };

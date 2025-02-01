@@ -1,6 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import { usePatternStore } from '../store/patterns';
 
-export const useA11y = (focusableElements: string[] = ['button', 'a', '[role="button"]']) => {
+export const useA11y = () => {
+  // Toggle high contrast mode
+  const toggleHighContrast = useCallback(() => {
+    document.body.classList.toggle('high-contrast');
+  }, []);
+  const { currentPattern, setPattern, setEnergyFlowIntensity } = usePatternStore();
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Handle tab key

@@ -1,144 +1,175 @@
-import { vec2, vec3, mat4 } from 'gl-matrix';
-
-// Core WebGL Types
-export interface WebGL2Context extends WebGL2RenderingContext {
-  programCache?: Map<string, WebGLProgram>;
+/**
+ * Represents a sacred geometry pattern configuration
+ */
+export interface PatternConfig {
+  /** Number of segments in the pattern (min: 3, max: 12) */
+  segments: number;
+  /** Number of concentric layers (min: 1, max: 10) */
+  layers: number;
+  /** Radius of the pattern in pixels */
+  radius: number;
+  /** Optional color scheme for the pattern */
+  colorScheme?: ColorScheme;
+  /** Optional animation settings */
+  animation?: AnimationConfig;
 }
 
-// Geometry Types
-export interface GeometryData {
-  vertices: Float32Array;
-  normals: Float32Array;
-  indices: Uint16Array;
-  uvs?: Float32Array;
-  tangents?: Float32Array;
-  colors?: Float32Array;
-  energyFields?: Float32Array;
-  harmonicWeights?: Float32Array;
-  metadata?: GeometryMetadata;
+/**
+ * Color scheme configuration for patterns
+ */
+export interface ColorScheme {
+  /** Primary color in hex format */
+  primary: string;
+  /** Secondary color in hex format */
+  secondary: string;
+  /** Background color in hex format */
+  background: string;
+  /** Accent color in hex format */
+  accent?: string;
+  /** Optional opacity value (0-1) */
+  opacity?: number;
 }
 
-export interface GeometryMetadata {
-  rings: number;
-  scale: number;
-  vertexCount: number;
-  triangleCount: number;
-  generationTime: number;
-}
-
-// Shader Types
-export interface ShaderConfig {
-  vertexShader: string;
-  fragmentShader: string;
-  uniforms: Record<string, any>;
-  attributes?: string[];
-}
-
-// Animation Types
+/**
+ * Animation configuration for dynamic patterns
+ */
 export interface AnimationConfig {
-  type: 'transform' | 'energyFlow' | 'harmonic' | 'pattern' | 'morph';
+  /** Duration of animation in milliseconds */
   duration: number;
-  startTime?: number;
-  easing?: string;
-  onProgress?: (progress: number) => void;
-  startConfig?: FlowerOfLifeConfig;
-  targetConfig?: FlowerOfLifeConfig;
+  /** Type of animation effect */
+  type: 'rotate' | 'pulse' | 'wave' | 'morph';
+  /** Animation easing function */
+  easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+  /** Whether animation should loop */
+  loop?: boolean;
+  /** Custom animation parameters */
+  params?: Record<string, number>;
 }
 
-// Pattern Types
-export interface FlowerOfLifeConfig {
-  rings: number;
-  scale?: number;
-  seedVisible?: boolean;
-  overlap?: boolean;
-  rotationSpeed?: number;
-  energyFlow?: boolean;
-  harmonicResonance?: boolean;
-  transformations?: TransformationConfig[];
-  animations?: AnimationConfig[];
-  renderQuality?: 'low' | 'medium' | 'high';
-  optimizationLevel?: 'performance' | 'balanced' | 'quality';
-  program?: WebGLProgram;
-  energyFieldProgram?: WebGLProgram;
-  harmonicProgram?: WebGLProgram;
-  debug?: boolean;
-}
-
-export interface TransformationConfig {
-  type: string;
-  startTime?: number;
-  progress?: number;
-  interpolator?: (t: number) => number;
-}
-
-// Energy Field Types
-export interface EnergyFieldConfig {
-  intensity: number;
-  frequency: number;
-  resonance: number;
-  harmonics: number[];
-  flowPattern: string;
-  interaction: string;
-  phaseShift: number;
-  amplitudeModulation: number;
-  frequencyModulation: number;
-  resonanceHarmonics: number[];
-  energyDistribution: string;
-  fieldInteractions: Map<string, number>;
-}
-
-// Harmonic Types
-export interface HarmonicConfig {
-  baseFrequency: number;
-  ratios: number[];
-  phases: number[];
-  amplitudes: number[];
-  resonances: number[];
-  interactions: Map<string, number>;
-  modulation: {
-    frequency: number;
-    amplitude: number;
-    phase: number;
-    type: string;
-  };
-}
-
-// Performance Types
-export interface PerformanceMetrics {
-  frameTime: number;
-  drawCalls: number;
+/**
+ * Geometry data structure for WebGL rendering
+ */
+export interface GeometryData {
+  /** Vertex positions */
+  vertices: Float32Array;
+  /** Vertex indices */
+  indices: Uint16Array;
+  /** Vertex normals */
+  normals?: Float32Array;
+  /** Texture coordinates */
+  texCoords?: Float32Array;
+  /** Number of triangles */
   triangleCount: number;
-  cacheEfficiency: {
-    geometry: number;
-    shader: number;
+  /** Vertex attribute configurations */
+  attributes: VertexAttributes;
+}
+
+/**
+ * Vertex attribute configuration
+ */
+export interface VertexAttributes {
+  /** Position attribute configuration */
+  position: AttributeConfig;
+  /** Normal attribute configuration */
+  normal?: AttributeConfig;
+  /** Texture coordinate attribute configuration */
+  texCoord?: AttributeConfig;
+  /** Color attribute configuration */
+  color?: AttributeConfig;
+}
+
+/**
+ * Vertex attribute configuration
+ */
+export interface AttributeConfig {
+  /** Number of components per vertex */
+  size: number;
+  /** Data type of components */
+  type: number;
+  /** Whether to normalize the data */
+  normalized?: boolean;
+  /** Stride between consecutive vertices */
+  stride?: number;
+  /** Offset within the vertex */
+  offset?: number;
+}
+
+/**
+ * Shader configuration for WebGL
+ */
+export interface ShaderConfig {
+  /** Vertex shader source code */
+  vertexShader: string;
+  /** Fragment shader source code */
+  fragmentShader: string;
+  /** Uniform variable declarations */
+  uniforms?: UniformDeclarations;
+  /** Attribute variable declarations */
+  attributes?: AttributeDeclarations;
+}
+
+/**
+ * Uniform variable declarations
+ */
+export interface UniformDeclarations {
+  [key: string]: {
+    type: string;
+    value: number | number[] | Float32Array;
   };
+}
+
+/**
+ * Attribute variable declarations
+ */
+export interface AttributeDeclarations {
+  [key: string]: {
+    size: number;
+    type: number;
+  };
+}
+
+/**
+ * Performance metrics for monitoring
+ */
+export interface PerformanceMetrics {
+  /** Frames per second */
+  fps: number;
+  /** Average frame render time in milliseconds */
+  averageFrameTime: number;
+  /** GPU memory usage in bytes */
+  gpuMemoryUsage?: number;
+  /** JavaScript heap size in bytes */
   memoryUsage: number;
+  /** Cache hit rate (0-1) */
+  cacheEfficiency: number;
+  /** Number of draw calls per frame */
+  drawCalls: number;
+  /** Number of triangles rendered */
+  triangleCount: number;
 }
 
-// Pattern State Types
-export interface PatternState {
-  active: boolean;
-  energy: number;
-  phase: number;
-  resonance: number;
+/**
+ * Custom error types for sacred geometry operations
+ */
+export enum GeometryErrorType {
+  INVALID_SEGMENTS = 'INVALID_SEGMENTS',
+  INVALID_LAYERS = 'INVALID_LAYERS',
+  INVALID_RADIUS = 'INVALID_RADIUS',
+  SHADER_COMPILATION = 'SHADER_COMPILATION',
+  BUFFER_ALLOCATION = 'BUFFER_ALLOCATION',
+  RENDER_ERROR = 'RENDER_ERROR'
 }
 
-// Error Types
-export class SacredGeometryError extends Error {
-  constructor(message: string, public type: string) {
+/**
+ * Error class for sacred geometry operations
+ */
+export class GeometryError extends Error {
+  constructor(
+    public type: GeometryErrorType,
+    message: string,
+    public details?: any
+  ) {
     super(message);
-    this.name = 'SacredGeometryError';
+    this.name = 'GeometryError';
   }
-}
-
-// Utility Types
-export interface GeometryComponents {
-  vertices: number[];
-  normals: number[];
-  indices: number[];
-  uvs: number[];
-  energyFields: number[];
-  tangents: number[];
-  colors: number[];
-  harmonicWeights: number[];
 }

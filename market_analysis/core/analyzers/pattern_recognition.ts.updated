@@ -1,0 +1,204 @@
+// pattern_recognition.ts
+import { PricePoint, SACRED_RATIOS } from '../../../src/shared/constants';
+import { GeometricRatio, PatternAnalysisResult, Pattern, PatternType } from './pattern-types';
+import { WebGLStateManager } from '../../../src/utils/webgl/state-manager';
+import { GEOMETRIC_RATIO_COMPUTE, PATTERN_DETECTION_COMPUTE } from '../../../src/utils/webgl/compute-shaders';
+import { PatternDetector } from './detectPatterns';
+import { PatternDetection } from './pattern-detection';
+
+export class PatternRecognizer {
+    private readonly goldenRatio = SACRED_RATIOS.PHI;
+    private readonly SIGNIFICANCE_THRESHOLD = 0.5;
+    private readonly GOLDEN_RATIO_TOLERANCE = 0.03;
+    private readonly MIN_HISTORICAL_MATCHES = 3;
+    private readonly VALIDATION_THRESHOLD = 0.75;
+    
+    private gl: WebGL2RenderingContext | null = null;
+    private stateManager: WebGLStateManager | null = null;
+    private geometricRatioProgram: WebGLProgram | null = null;
+    private patternDetectionProgram: WebGLProgram | null = null;
+    private historicalPatterns: Map<PatternType, number> = new Map();
+    private falsePositiveRegistry: Map<PatternType, number> = new Map();
+    private canvas: HTMLCanvasElement;
+
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 1024;
+        this.canvas.height = 1024;
+        this.initializeWebGL();
+    }
+
+    private initializeWebGL(): void {
+        try {
+            this.gl = this.canvas.getContext('webgl2');
+            if (!this.gl) {
+                console.warn('WebGL 2 not supported, falling back to CPU implementation');
+                return;
+            }
+
+            this.stateManager = new WebGLStateManager(this.gl);
+            const shaderManager = this.stateManager.getShaderManager();
+            
+            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            this.gl.enable(this.gl.BLEND);
+            this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+            this.geometricRatioProgram = shaderManager.createComputeProgram({
+                source: GEOMETRIC_RATIO_COMPUTE,
+                workGroupSize: [256, 1, 1],
+                uniforms: { goldenRatio: this.goldenRatio }
+            });
+            
+            this.patternDetectionProgram = shaderManager.createComputeProgram({
+                source: PATTERN_DETECTION_COMPUTE,
+                workGroupSize: [256, 1, 1],
+                uniforms: {
+                    goldenRatio: this.goldenRatio,
+                    significanceThreshold: this.SIGNIFICANCE_THRESHOLD,
+                    windowSize: 10
+                }
+            });
+
+            if (!this.geometricRatioProgram || !this.patternDetectionProgram) {
+                throw new Error('Failed to create shader programs');
+            }
+        } catch (error) {
+            console.warn('WebGL initialization failed:', error);
+            if (this.gl) this.gl = null;
+            if (this.stateManager) {
+                this.stateManager.dispose();
+                this.stateManager = null;
+            }
+            this.geometricRatioProgram = null;
+            this.patternDetectionProgram = null;
+        }
+    }
+
+    public async analyzePattern(priceData: PricePoint[]): Promise<PatternAnalysisResult> {
+        const startTime = performance.now();
+        
+        if (!priceData?.length) {
+            return {
+                patterns: [],
+                confidence: 0,
+                executionTime: 0,
+                gpuAccelerated: false,
+                timestamp: Date.now()
+            };
+        }
+
+        try {
+            const geometricRatios = this.calculateGeometricRatios(priceData);
+            let patterns: Pattern[] = [];
+            
+            if (this.gl && this.geometricRatioProgram && this.patternDetectionProgram) {
+                patterns = await this.detectPatternsGPU(priceData);
+            } else {
+                const patternDetector = new PatternDetector(this.goldenRatio, this.GOLDEN_RATIO_TOLERANCE);
+                patterns = await patternDetector.detectPatterns(geometricRatios);
+            }
+
+            const validatedPatterns = patterns.filter(pattern => {
+                const isValid = pattern.confidence >= this.VALIDATION_THRESHOLD;
+                if (isValid) {
+                    const count = this.historicalPatterns.get(pattern.type) || 0;
+                    this.historicalPatterns.set(pattern.type, count + 1);
+                }
+                return isValid;
+            });
+
+            return {
+                patterns: validatedPatterns,
+                confidence: this.calculateConfidence(geometricRatios),
+                executionTime: performance.now() - startTime,
+                gpuAccelerated: Boolean(this.gl),
+                timestamp: Date.now()
+            };
+        } catch (error) {
+            console.error('Pattern analysis failed:', error);
+            throw error;
+        }
+    }
+
+    private async detectPatternsGPU(priceData: PricePoint[]): Promise<Pattern[]> {
+        if (!this.gl || !this.geometricRatioProgram || !this.patternDetectionProgram) {
+            throw new Error('GPU resources not initialized');
+        }
+
+        try {
+            const data = new Float32Array(priceData.map(p => p.price));
+            const detector = new PatternDetection();
+            const results = await detector.executeComputeShader(
+                this.gl,
+                this.patternDetectionProgram,
+                data,
+                data.length
+            );
+
+            const patternType = detector.interpretResults(
+                results,
+                this.goldenRatio,
+                this.GOLDEN_RATIO_TOLERANCE
+            );
+
+            if (patternType !== PatternType.UNKNOWN) {
+                const geometricRatios = this.calculateGeometricRatios(priceData);
+                return [{
+                    type: patternType,
+                    confidence: this.calculateConfidence(geometricRatios),
+                    startIndex: 0,
+                    endIndex: data.length
+                }];
+            }
+
+            return [];
+        } catch (error) {
+            console.error('GPU pattern detection failed:', error);
+            throw error;
+        }
+    }
+
+    private calculateGeometricRatios(priceData: PricePoint[]): GeometricRatio[] {
+        if (!priceData || priceData.length < 2) return [];
+
+        const ratios: GeometricRatio[] = [];
+        for (let i = 1; i < priceData.length; i++) {
+            const current = priceData[i].price;
+            const previous = priceData[i - 1].price;
+            const ratio = current / previous;
+            const significance = this.calculateRatioSignificance(current, previous);
+            
+            ratios.push({
+                ratio,
+                significance,
+                timestamp: priceData[i].timestamp
+            });
+        }
+        return ratios;
+    }
+
+    private calculateConfidence(geometricRatios: GeometricRatio[]): number {
+        if (!geometricRatios || geometricRatios.length < 2) return 0;
+
+        const ratios = geometricRatios.map(g => g.ratio);
+        const trendStrength = this.calculateTrendStrength(ratios);
+        const complexity = this.calculatePatternComplexity(ratios);
+        const stability = this.calculateRatioStability(geometricRatios);
+        const alignment = this.calculateGoldenRatioAlignment(geometricRatios);
+
+        const confidenceScore = 
+            trendStrength * 0.3 +
+            (1 - complexity) * 0.2 +
+            stability * 0.2 +
+            alignment * 0.3;
+
+        return Math.min(1, confidenceScore);
+    }
+
+    private calculateRatioSignificance(current: number, previous: number): number {
+        const ratio = current / previous;
+        const deviation = Math.abs(ratio - this.goldenRatio);
+        return Math.max(0, 1 - deviation / this.GOLDEN_RATIO_TOLERANCE);
+    }
+}

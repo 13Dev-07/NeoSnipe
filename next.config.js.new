@@ -1,0 +1,14 @@
+/** @type {import('next').NextConfig} */
+const config = {
+  // ... other config
+  compiler: {
+    // Enables the styled-components SWC transform
+    styledComponents: true
+  },
+  webpack: (config) => {
+    // Important: return the modified config
+    return config;
+  },
+}
+
+module.exports = config;

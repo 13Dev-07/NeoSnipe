@@ -3,11 +3,18 @@
  * and memory management.
  */
 export class BatchProcessor<T, R> {
-  private readonly batchSize: number;
+  private readonly initialBatchSize: number;
+  private batchSize: number;
   private readonly processItem: (item: T) => Promise<R>;
   private readonly onBatchComplete?: (results: R[], progress: number) => void;
   private readonly maxConcurrentBatches: number;
   private readonly timeoutBetweenBatches: number;
+  private readonly resultCache: Map<string, R> = new Map();
+  private readonly priorityQueue: PriorityQueue<T> = new PriorityQueue();
+  private lastProcessingTime: number = 0;
+  private readonly MIN_BATCH_SIZE = 5;
+  private readonly MAX_BATCH_SIZE = 100;
+  private readonly PROCESSING_TIME_THRESHOLD = 1000; // 1 second
 
   constructor(options: {
     batchSize: number;
@@ -15,12 +22,26 @@ export class BatchProcessor<T, R> {
     onBatchComplete?: (results: R[], progress: number) => void;
     maxConcurrentBatches?: number;
     timeoutBetweenBatches?: number;
+    cacheResults?: boolean;
   }) {
+    this.initialBatchSize = options.batchSize;
     this.batchSize = options.batchSize;
     this.processItem = options.processItem;
     this.onBatchComplete = options.onBatchComplete;
     this.maxConcurrentBatches = options.maxConcurrentBatches || 4;
     this.timeoutBetweenBatches = options.timeoutBetweenBatches || 0;
+  }
+
+  private adjustBatchSize(processingTime: number): void {
+    if (processingTime > this.PROCESSING_TIME_THRESHOLD && this.batchSize > this.MIN_BATCH_SIZE) {
+      this.batchSize = Math.max(this.MIN_BATCH_SIZE, Math.floor(this.batchSize * 0.8));
+    } else if (processingTime < this.PROCESSING_TIME_THRESHOLD / 2 && this.batchSize < this.MAX_BATCH_SIZE) {
+      this.batchSize = Math.min(this.MAX_BATCH_SIZE, Math.floor(this.batchSize * 1.2));
+    }
+  }
+
+  public enqueuePriorityItems(items: T[], priority: number = 1): void {
+    items.forEach(item => this.priorityQueue.enqueue(item, priority));
   }
 
   /**
@@ -62,13 +83,26 @@ export class BatchProcessor<T, R> {
    * Process a single batch of items with error handling and retries.
    */
   private async processBatch(batch: T[]): Promise<R[]> {
+    const startTime = performance.now();
     const results: R[] = [];
     const errors: Error[] = [];
 
     await Promise.all(
       batch.map(async (item) => {
         try {
+          // Check cache first
+          const cacheKey = this.generateCacheKey(item);
+          const cachedResult = this.resultCache.get(cacheKey);
+          
+          if (cachedResult) {
+            results.push(cachedResult);
+            return;
+          }
+
           const result = await this.processWithRetry(item);
+          
+          // Cache the result
+          this.resultCache.set(cacheKey, result);
           results.push(result);
         } catch (error) {
           errors.push(error as Error);
@@ -80,7 +114,24 @@ export class BatchProcessor<T, R> {
       console.error(`Batch processing encountered ${errors.length} errors:`, errors);
     }
 
+    const processingTime = performance.now() - startTime;
+    this.lastProcessingTime = processingTime;
+    this.adjustBatchSize(processingTime);
+
     return results;
+  }
+
+  private generateCacheKey(item: T): string {
+    // Generate a cache key based on the item's properties
+    return JSON.stringify(item);
+  }
+
+  public clearCache(): void {
+    this.resultCache.clear();
+  }
+
+  public getCacheSize(): number {
+    return this.resultCache.size;
   }
 
   /**

@@ -1,0 +1,86 @@
+// pattern_recognition.ts
+import { PricePoint, SACRED_RATIOS } from '../../../src/shared/constants';
+import { GeometricRatio, PatternAnalysisResult, PatternConfidence, PatternType } from './pattern-types';
+import { WebGLStateManager } from '../../../src/utils/webgl/state-manager';
+import { GEOMETRIC_RATIO_COMPUTE, PATTERN_DETECTION_COMPUTE } from '../../../src/utils/webgl/compute-shaders';
+
+/**
+ * Analyzes price patterns using sacred geometry principles and GPU acceleration.
+ * Implements pattern detection using both WebGL compute shaders and CPU fallback.
+ */
+export class PatternRecognizer {
+    private readonly goldenRatio = SACRED_RATIOS.PHI;
+    private readonly SIGNIFICANCE_THRESHOLD = 0.5;
+    private readonly GOLDEN_RATIO_TOLERANCE = 0.03;
+    private readonly MIN_HISTORICAL_MATCHES = 3;
+    private readonly VALIDATION_THRESHOLD = 0.75;
+    
+    private gl: WebGL2RenderingContext | null = null;
+    private stateManager: WebGLStateManager | null = null;
+    private geometricRatioProgram: WebGLProgram | null = null;
+    private patternDetectionProgram: WebGLProgram | null = null;
+    private historicalPatterns: Map<PatternType, number> = new Map();
+    private falsePositiveRegistry: Map<PatternType, number> = new Map();
+    private canvas: HTMLCanvasElement;
+
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 1024;
+        this.canvas.height = 1024;
+        this.initializeWebGL();
+    }
+
+    private initializeWebGL(): void {
+        try {
+            this.gl = this.canvas.getContext('webgl2');
+            if (!this.gl) {
+                console.warn('WebGL 2 not supported, falling back to CPU implementation');
+                return;
+            }
+
+            this.stateManager = new WebGLStateManager(this.gl);
+            
+            // Initialize compute shader programs
+            const shaderManager = this.stateManager.getShaderManager();
+            
+            // Set up WebGL context
+            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            this.gl.enable(this.gl.BLEND);
+            this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+            // Initialize compute shader programs
+            this.geometricRatioProgram = shaderManager.createComputeProgram({
+                source: GEOMETRIC_RATIO_COMPUTE,
+                workGroupSize: [256, 1, 1],
+                uniforms: { goldenRatio: this.goldenRatio }
+            });
+            
+            this.patternDetectionProgram = shaderManager.createComputeProgram({
+                source: PATTERN_DETECTION_COMPUTE,
+                workGroupSize: [256, 1, 1],
+                uniforms: {
+                    goldenRatio: this.goldenRatio,
+                    significanceThreshold: this.SIGNIFICANCE_THRESHOLD,
+                    windowSize: 10
+                }
+            });
+
+            if (!this.geometricRatioProgram || !this.patternDetectionProgram) {
+                throw new Error('Failed to create shader programs');
+            }
+
+        } catch (error) {
+            console.warn('WebGL initialization failed:', error);
+            // Clean up resources
+            if (this.gl) {
+                this.gl = null;
+            }
+            if (this.stateManager) {
+                this.stateManager.dispose();
+                this.stateManager = null;
+            }
+            this.geometricRatioProgram = null;
+            this.patternDetectionProgram = null;
+        }
+    }

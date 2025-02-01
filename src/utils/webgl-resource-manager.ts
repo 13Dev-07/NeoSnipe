@@ -1,4 +1,5 @@
 import { SacredGeometryError } from '../types/sacred-geometry';
+import { WebGLResourcePool } from './webgl/resource-pool';
 
 interface ResourceTracker {
   buffers: Set<WebGLBuffer>;

@@ -1,4 +1,6 @@
 import { GeometryData, ShaderConfig, PerformanceMetrics } from '../types/sacred-geometry';
+import { GeometryOptimizer } from './optimizations/geometry-optimizer';
+import { ShaderComplexityAnalyzer } from './optimizations/shader-complexity-analyzer';
 
 interface CachedGeometry extends GeometryData {
   lastUsed: number;
@@ -227,7 +229,8 @@ export class PerformanceOptimizer {
     // - Vertex deduplication
     // - Index buffer optimization
     // - Triangle strip conversion
-    return geometry; // Placeholder for actual optimization
+    const optimizer = new GeometryOptimizer();
+    return optimizer.optimizeGeometry(geometry);
   }
 
   analyzeShaderComplexity(config: ShaderConfig): void {

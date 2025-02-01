@@ -405,6 +405,24 @@ export class WebGLRenderer {
   }
 
   private drawScene(): void {
+    if (!this.program || !this.positionBuffer) return;
+
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.postProcessBuffer.framebuffer);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Bind shader program and attributes
+    gl.useProgram(this.program.program);
+    this.bindMainAttributes();
+    this.setMainUniforms(performance.now());
+
+    // Draw the geometry
+    gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
+    this.performanceMetrics.drawCalls++;
+
+    // Post-processing pass
+    this.drawPostProcess();
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
   }
 

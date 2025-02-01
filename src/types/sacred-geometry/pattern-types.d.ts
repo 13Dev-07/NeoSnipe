@@ -1,0 +1,1 @@
+export type SacredPatternType = 'flowerOfLife' | 'metatronsCube' | 'sriYantra' | 'torus' | 'pentagram' | 'fibonacci';

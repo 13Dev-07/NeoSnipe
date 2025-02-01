@@ -1,29 +1,25 @@
-import React from 'react';
-import Head from 'next/head';
-import { HeroSection } from '../components/landing/HeroSection';
-import { FeatureSection } from '../components/landing/FeatureSection';
-import { TokenDiscoveryPreview } from '../components/landing/TokenDiscoveryPreview';
-import Layout from '../components/layout/Layout';
+import type { NextPage } from 'next'
+import Head from 'next/head'
+import { NavigationBar } from '../components/navigation/NavigationBar'
+import { HeroSection } from '../components/landing/HeroSection'
+import { FeaturesGrid } from '../components/landing/FeaturesGrid'
 
-export default function Home() {
+const Home: NextPage = () => {
   return (
-    <Layout>
+    <>
       <Head>
         <title>NeoSnipe - Sacred Geometry Token Discovery</title>
-        <meta name="description" content="Discover tokens through sacred geometry and advanced market analysis. NeoSnipe combines ancient wisdom with cutting-edge technology." />
-        <meta name="keywords" content="crypto, token discovery, sacred geometry, market analysis, golden ratio, fibonacci, trading" />
+        <meta name="description" content="Discover tokens through sacred geometry" />
       </Head>
-
-      <div className="relative">
-        {/* Hero Section */}
-        <HeroSection />
-
-        {/* Feature Section */}
-        <FeatureSection />
-
-        {/* Token Discovery Preview */}
-        <TokenDiscoveryPreview />
+      <div className="min-h-screen bg-deep-space">
+        <NavigationBar />
+        <main>
+          <HeroSection />
+          <FeaturesGrid />
+        </main>
       </div>
-    </Layout>
-  );
+    </>
+  )
 }
+
+export default Home
